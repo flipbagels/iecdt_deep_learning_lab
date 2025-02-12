@@ -60,13 +60,23 @@ def validation(cfg, model, test_data_loader, data_stats):
     return fig, val_mse
 
 
+@hydra.main(version_base=None, config_path="config_vit", config_name="train")
 def main(cfg: DictConfig):
-    TILES_FILE = "/gws/nopw/j04/iecdt/deep_learning_lab/1km_naturalcolor_numpy"
-    TRAIN_METADATA = "/gws/nopw/j04/iecdt/deep_learning_lab/1km_naturalcolor_metadata_time_train.csv"
-    VAL_METADATA = "/gws/nopw/j04/iecdt/deep_learning_lab/1km_naturalcolor_metadata_time_val.csv"
-    TEST_METADATA = "/gws/nopw/j04/iecdt/deep_learning_lab/1km_naturalcolor_metadata_time_test.csv"
-    TILES_STATISTICS = "/gws/nopw/j04/iecdt/deep_learning_lab/1km_naturalcolor_metadata_rgb_stats.npz"
-    
+    random.seed(cfg.seed)
+    np.random.seed(cfg.seed)
+    torch.manual_seed(cfg.seed)
+
+    wandb.login(key=os.environ["WANDB_API_KEY"])
+    wandb_id = wandb.util.generate_id()
+    wandb.init(
+        id=wandb_id,
+        resume="allow",
+        project=cfg.wandb.project,
+        group=cfg.name,
+        config=OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True),
+        mode=cfg.wandb.mode,
+    )
+
     data_stats = np.load(TILES_STATISTICS)
     data_transforms = torchvision.transforms.Compose([
         torchvision.transforms.Grayscale(num_output_channels=1),
@@ -87,7 +97,7 @@ def main(cfg: DictConfig):
         dataloader_workers=cfg.dataloader_workers,
     )
 
-    model = iecdt_lab.autoencoder.CNNAutoencoder(latent_dim=cfg.latent_dim)
+    model = DiT(input_size=256, in_channels=1, hidden_size=128, depth=8, num_heads=8, num_classes=0, learn_sigma= False)
     model = model.to(cfg.device)
 
     criterion = nn.MSELoss()
