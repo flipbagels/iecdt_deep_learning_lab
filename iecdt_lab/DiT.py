@@ -1,9 +1,14 @@
+import sys
+import os
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 import torch
 import torch.nn as nn
 from timm.models.vision_transformer import PatchEmbed, Attention, Mlp
 # from src.transformer.timestep_embedding import TimestepEmbedder
-from src.transformer.model_block import modulate, DiTBlock, FinalLayer
-from src.transformer.pos_embedding import embed_2d_sincos_pos
+from model_block import modulate, DiTBlock, FinalLayer
+from embedding import embed_2d_sincos_pos
 """
 Although it is a DiT model, as we want the input and output shape to be the same this is fine.
 You can just view it as a autoencoder type of setup.
