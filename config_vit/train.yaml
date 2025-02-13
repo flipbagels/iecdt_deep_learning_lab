@@ -1,8 +1,17 @@
 defaults:
   - _self_
   - hydra: default
-  - wandb: default
-  - override hydra/launcher: slurm
+  # - wandb: default
+  # - override hydra/launcher: slurm
+
+project_name: iecdt
+run_name: "test"
+
+#wandb 
+metric: loss
+wandb: online
+tracking_metric: loss
+
 
 name: test
 smoke_test: False
