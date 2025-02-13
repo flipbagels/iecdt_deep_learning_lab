@@ -8,10 +8,15 @@ project_root = os.path.abspath(os.path.join(current_dir, ".."))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
     
+import random
+import ssl
+import wandb
+import hydra
 import iecdt_lab
 import torch
 import torchvision
 from torch import nn
+from omegaconf import DictConfig, OmegaConf
 from iecdt_lab.DiT import DiT
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
@@ -66,6 +71,12 @@ def main(cfg: DictConfig):
     np.random.seed(cfg.seed)
     torch.manual_seed(cfg.seed)
 
+    TILES_FILE = "/gws/nopw/j04/iecdt/deep_learning_lab/1km_naturalcolor_numpy"
+    TRAIN_METADATA = "/gws/nopw/j04/iecdt/deep_learning_lab/1km_naturalcolor_metadata_time_train.csv"
+    VAL_METADATA = "/gws/nopw/j04/iecdt/deep_learning_lab/1km_naturalcolor_metadata_time_val.csv"
+    TEST_METADATA = "/gws/nopw/j04/iecdt/deep_learning_lab/1km_naturalcolor_metadata_time_test.csv"
+    TILES_STATISTICS = "/gws/nopw/j04/iecdt/deep_learning_lab/1km_naturalcolor_metadata_rgb_stats.npz"
+    
     wandb.login(key=os.environ["WANDB_API_KEY"])
     wandb_id = wandb.util.generate_id()
     wandb.init(
@@ -79,14 +90,13 @@ def main(cfg: DictConfig):
 
     data_stats = np.load(TILES_STATISTICS)
     data_transforms = torchvision.transforms.Compose([
-        torchvision.transforms.Grayscale(num_output_channels=1),
-        torchvision.transforms.ToTensor(),
-        torchvision.transforms.Normalize(
-            mean=[data_stats["rgb_mean"][0]],
-            std=[data_stats["rgb_std"][0]]
-        ),
-        torchvision.transforms.Normalize((0.5,), (0.5,))
-    ])
+    torchvision.transforms.ToTensor(),
+    torchvision.transforms.Grayscale(num_output_channels=1),
+    torchvision.transforms.Normalize(
+        mean=[float(data_stats["rgb_mean"][0])], 
+        std=[float(data_stats["rgb_std"][0])]
+    )
+])
     
     train_data_loader, val_data_loader = iecdt_lab.data_loader.get_data_loaders(
         tiles_path=cfg.tiles_path,
