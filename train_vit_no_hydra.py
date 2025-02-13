@@ -146,6 +146,12 @@ def main(cfg):
 
 if __name__ == "__main__":
 
+    wandb_cfg = {
+        "mode": "online",
+        "project": "iecdt_deep_learning_lab"
+    }
+    wandb_cfg = SimpleNamespace(wandb_cfg)
+
     cfg = {
         "name": "test",
         "smoke_test": False,
@@ -161,6 +167,7 @@ if __name__ == "__main__":
         "train_metadata": "/gws/nopw/j04/iecdt/deep_learning_lab/1km_naturalcolor_metadata_time_train.csv",
         "val_metadata": "/gws/nopw/j04/iecdt/deep_learning_lab/1km_naturalcolor_metadata_time_val.csv",
         "train_rgb_stats": "/gws/nopw/j04/iecdt/deep_learning_lab/1km_naturalcolor_metadata_rgb_stats.npz",
+        "wandb": wandb_cfg 
     }
 
     cfg = SimpleNamespace(**cfg)
