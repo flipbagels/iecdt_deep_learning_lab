@@ -16,6 +16,7 @@ import hydra
 import iecdt_lab
 import torch
 import torchvision
+
 from torch import nn
 from omegaconf import DictConfig, OmegaConf
 from iecdt_lab.DiT import DiT
@@ -24,6 +25,16 @@ from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 import tqdm
 import numpy as np
+
+def setup_wandb(cfg):
+    config_dict = OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True)
+    kwargs = {'project': cfg.project_name, 'config': config_dict, 'reinit': True, 'mode': cfg.wandb,
+              'settings': wandb.Settings(_disable_stats=True)}
+    run = wandb.init(**kwargs)
+    #wandb.save('*.txt')
+    #run.save()
+    return cfg, run
+
 
 
 def plot_reconstructions(batch, reconstructions, data_stats, max_images=8):
@@ -78,17 +89,8 @@ def main(cfg: DictConfig):
     TEST_METADATA = "/gws/nopw/j04/iecdt/deep_learning_lab/1km_naturalcolor_metadata_time_test.csv"
     TILES_STATISTICS = "/gws/nopw/j04/iecdt/deep_learning_lab/1km_naturalcolor_metadata_rgb_stats.npz"
     
-    wandb.login(key=os.environ["WANDB_API_KEY"])
-    wandb_id = wandb.util.generate_id()
-    wandb.init(
-        id=wandb_id,
-        resume="allow",
-        project=cfg.wandb.project,
-        group=cfg.name,
-        config=OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True),
-        mode=cfg.wandb.mode,
-    )
-
+    setup_wandb(cfg)
+    
     data_stats = np.load(TILES_STATISTICS)
     data_transforms = torchvision.transforms.Compose([
     torchvision.transforms.ToTensor(),
@@ -108,7 +110,9 @@ def main(cfg: DictConfig):
         dataloader_workers=cfg.dataloader_workers,
     )
 
-    model = DiT(input_size=256, in_channels=1, hidden_size=128, depth=8, num_heads=8, num_classes=0, learn_sigma= False)
+    model = DiT(input_size=256, in_channels=1, hidden_size=128, depth=8, num_heads=8, num_classes=0, learn_sigma= False,
+                patch_size=8
+                )
     model = model.to(cfg.device)
 
     criterion = nn.MSELoss()
@@ -124,15 +128,15 @@ def main(cfg: DictConfig):
             loss = criterion(preds, batch)
             loss.backward()
             optimizer.step()
+            wandb.log({"loss/train": loss.item()})
 
-            if i % cfg.log_freq == 0:
-                logging.info(
-                    f"Epoch {epoch}/{cfg.epochs} Batch {i}/{len(train_data_loader)}: Loss={loss.item():.2f}"
-                )
-                wandb.log({"loss/train": loss.item()})
+            # if i % cfg.log_freq == 0:
+            #     logging.info(
+            #         f"Epoch {epoch}/{cfg.epochs} Batch {i}/{len(train_data_loader)}: Loss={loss.item():.2f}"
+            #     )
 
-            if cfg.smoke_test and i == 50:
-                break
+            # if cfg.smoke_test and i == 50:
+            #     break
 
         eval_fig, val_mse = validation(cfg, model, val_data_loader, data_stats)
         wandb.log({"predictions": eval_fig, "loss/val": val_mse})
